@@ -20,10 +20,7 @@ const pathToPosix = path => path.replace(/\\/g, '/')
 
 class NextjsComponent extends Component {
   async default(inputs = {}) {
-    if (inputs.build !== false) {
-      await this.build(inputs)
-    }
-
+    await this.build(inputs)
     return this.deploy(inputs)
   }
 
