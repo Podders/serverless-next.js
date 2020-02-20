@@ -234,7 +234,7 @@ class NextjsComponent extends Component {
     const buildConfig = {
       enabled: inputs.build
         ? inputs.build !== false && inputs.build.enabled !== false
-        : true,
+        : false,
       cmd: 'node_modules/.bin/next',
       args: ['build'],
       ...(typeof inputs.build === 'object' ? inputs.build : {}),
