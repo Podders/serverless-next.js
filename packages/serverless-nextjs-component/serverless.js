@@ -134,9 +134,8 @@ class NextjsComponent extends Component {
     const isApiPage = p => p.startsWith('pages/api')
 
     Object.entries(pagesManifest).forEach(([route, pageFile]) => {
-      const dynamicRoute = isDynamicRoute(route)
-      const expressRoute = dynamicRoute ? expressifyDynamicRoute(route) : null
-
+      const dynamicRoute = isDynamicRoute(route);
+      const expressRoute = dynamicRoute ? expressifyDynamicRoute(route) : null;
       if (isHtmlPage(pageFile)) {
         if (dynamicRoute) {
           htmlPages.dynamic[expressRoute] = {
@@ -394,14 +393,14 @@ class NextjsComponent extends Component {
         : (inputs.timeout && inputs.timeout[lambdaType]) || 10
 
     const getLambdaName = lambdaType =>
-      typeof inputs.name === 'string'
+      typeof inputs.name === "string"
         ? inputs.name
-        : inputs.name && inputs.name[lambdaType]
+        : inputs.name && inputs.name[lambdaType];
 
     if (hasAPIPages) {
       const apiEdgeLambdaInput = {
-        description: 'API Lambda@Edge for Next CloudFront distribution',
-        handler: 'index.handler',
+        description: "API Lambda@Edge for Next CloudFront distribution",
+        handler: "index.handler",
         code: join(nextConfigPath, API_LAMBDA_CODE_DIR),
         role: {
           service: ['lambda.amazonaws.com', 'edgelambda.amazonaws.com'],
@@ -411,36 +410,39 @@ class NextjsComponent extends Component {
               'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
           }
         },
-        memory: getLambdaMemory('apiLambda'),
-        timeout: getLambdaTimeout('apiLambda')
-      }
-      const apiLambdaName = getLambdaName('apiLambda')
-      if (apiLambdaName) apiEdgeLambdaInput.name = apiLambdaName
+        memory: getLambdaMemory("apiLambda"),
+        timeout: getLambdaTimeout("apiLambda")
+      };
+      const apiLambdaName = getLambdaName("apiLambda");
+      if (apiLambdaName) apiEdgeLambdaInput.name = apiLambdaName;
 
-      apiEdgeLambdaOutputs = await apiEdgeLambda(apiEdgeLambdaInput)
+      apiEdgeLambdaOutputs = await apiEdgeLambda(apiEdgeLambdaInput);
 
-      apiEdgeLambdaPublishOutputs = await apiEdgeLambda.publishVersion()
-
-      cloudFrontOrigins[0].pathPatterns['api/*'] = {
+      apiEdgeLambdaPublishOutputs = await apiEdgeLambda.publishVersion();
+      const apiCloudfrontInputs =
+        (inputs.cloudfront && inputs.cloudfront.api) || {};
+      cloudFrontOrigins[0].pathPatterns["api/*"] = {
         ttl: 0,
-        'lambda@edge': {
-          'origin-request': `${apiEdgeLambdaOutputs.arn}:${apiEdgeLambdaPublishOutputs.version}`
-        },
         allowedHttpMethods: [
-          'HEAD',
-          'DELETE',
-          'POST',
-          'GET',
-          'OPTIONS',
-          'PUT',
-          'PATCH'
-        ]
-      }
+          "HEAD",
+          "DELETE",
+          "POST",
+          "GET",
+          "OPTIONS",
+          "PUT",
+          "PATCH"
+        ],
+        ...apiCloudfrontInputs,
+        // lambda@edge key is last and therefore cannot be overridden
+        "lambda@edge": {
+          "origin-request": `${apiEdgeLambdaOutputs.arn}:${apiEdgeLambdaPublishOutputs.version}`
+        }
+      };
     }
 
     const defaultEdgeLambdaInput = {
-      description: 'Default Lambda@Edge for Next CloudFront distribution',
-      handler: 'index.handler',
+      description: "Default Lambda@Edge for Next CloudFront distribution",
+      handler: "index.handler",
       code: join(nextConfigPath, DEFAULT_LAMBDA_CODE_DIR),
       role: {
         service: ['lambda.amazonaws.com', 'edgelambda.amazonaws.com'],
@@ -450,28 +452,33 @@ class NextjsComponent extends Component {
             'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
         }
       },
-      memory: getLambdaMemory('defaultLambda'),
-      timeout: getLambdaTimeout('defaultLambda')
-    }
-    const defaultLambdaName = getLambdaName('defaultLambda')
-    if (defaultLambdaName) defaultEdgeLambdaInput.name = defaultLambdaName
+      memory: getLambdaMemory("defaultLambda"),
+      timeout: getLambdaTimeout("defaultLambda")
+    };
+    const defaultLambdaName = getLambdaName("defaultLambda");
+    if (defaultLambdaName) defaultEdgeLambdaInput.name = defaultLambdaName;
 
     const defaultEdgeLambdaOutputs = await defaultEdgeLambda(
       defaultEdgeLambdaInput
-    )
+    );
 
-    const defaultEdgeLambdaPublishOutputs = await defaultEdgeLambda.publishVersion()
+    const defaultEdgeLambdaPublishOutputs = await defaultEdgeLambda.publishVersion();
 
+    const defaultCloudfrontInputs =
+      (inputs.cloudfront && inputs.cloudfront.defaults) || {};
     const cloudFrontOutputs = await cloudFront({
       defaults: {
         ttl: 0,
-        allowedHttpMethods: ['HEAD', 'GET'],
+        allowedHttpMethods: ["HEAD", "GET"],
+        ...defaultCloudfrontInputs,
         forward: {
-          cookies: 'all',
-          queryString: true
+          cookies: "all",
+          queryString: true,
+          ...defaultCloudfrontInputs.forward
         },
-        'lambda@edge': {
-          'origin-request': `${defaultEdgeLambdaOutputs.arn}:${defaultEdgeLambdaPublishOutputs.version}`
+        // lambda@edge key is last and therefore cannot be overridden
+        "lambda@edge": {
+          "origin-request": `${defaultEdgeLambdaOutputs.arn}:${defaultEdgeLambdaPublishOutputs.version}`
         }
       },
       origins: cloudFrontOrigins
